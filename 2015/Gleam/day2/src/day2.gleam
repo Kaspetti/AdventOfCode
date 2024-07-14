@@ -11,14 +11,28 @@ import simplifile
 pub fn main() {
   case simplifile.read("input") {
     Ok(input) -> { 
-      let areas = string.trim(input)
+      let dims = string.trim(input)
                   |> string.split("\n")
                   |> list.map(string.split(_, "x"))
-                  |> list.map(surface_area)
-                  |> result.all()
+
+      let areas = 
+        dims
+        |> list.map(surface_area)
+        |> result.all()
 
       case areas {
-        Ok(areas) -> io.println(int.to_string(list.fold(areas, 0, int.add)))
+        Ok(areas) -> io.println("Wrapping paper required: " <> int.to_string(list.fold(areas, 0, int.add)) <> " ft\u{00B2}")
+
+        Error(err) -> io.println_error(err)
+      }
+
+      let lengths =
+        dims
+        |> list.map(ribbon_length)
+        |> result.all()
+
+      case lengths {
+        Ok(length) -> io.println("Ribbon required: " <> int.to_string(list.fold(length, 0, int.add)) <> " ft")
 
         Error(err) -> io.println_error(err)
       }
@@ -39,10 +53,28 @@ fn surface_area(dims: List(String)) -> Result(Int, String) {
 
       let smallest_area = case list.sort([l, w, h], by: int.compare) {
         [a, b, _] -> a * b
-        _ -> 0
+        _ -> -1 // Impossible
       }
 
       Ok(2*l*w + 2*w*h + 2*h*l + smallest_area)
+    }
+
+    _ -> Error("Invalid dim structure: " <> pretty_dim(dims))
+  }
+}
+
+
+fn ribbon_length(dims: List(String)) -> Result(Int, String) {
+  case dims {
+    [length, width, height] -> {
+      use l <- result.try(parse_dim(length, "length"))
+      use w <- result.try(parse_dim(width, "width"))
+      use h <- result.try(parse_dim(height, "height"))
+
+      case list.sort([l, w, h], by: int.compare) {
+        [a, b, c] -> Ok({a+a+b+b} + {a*b*c})
+        _ -> Ok(-1) // Impossible
+      }
     }
 
     _ -> Error("Invalid dim structure: " <> pretty_dim(dims))
